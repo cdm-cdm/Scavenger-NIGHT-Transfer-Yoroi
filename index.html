@@ -220,21 +220,34 @@
 
 <body>
     <div class="container">
-        <h1>🔐 Yoroi Signature Tool</h1>
-        <p class="subtitle">Consolidate Allocations for Scavenger Mine</p>
+        <h1>🔐 Scavenger-NIGHT-Transfer-Yoroi</h1>
+        <p class="subtitle">Hợp nhất token Night cho Scavenger Mine</p>
 
         <button type="button" class="collapsible">📖 Hướng dẫn chi tiết</button>
         <div class="content">
             <p><strong>Bước 1:</strong> Nhập địa chỉ Donor (Người cho) và Recipient (Người nhận).</p>
-            <p><strong>Bước 2:</strong> Nhấn <em>Ký và tạo Signature</em> để Yoroi mở ví và ký message.</p>
-            <p><strong>Bước 3:</strong> Hệ thống sẽ tự động gửi request đến Scavenger và hiển thị kết quả dưới đây.</p>
+            <p><strong>Bước 2:</strong> Nhấn <em>Ký và tạo chữ ký số Signature</em> để Yoroi mở ví và ký message.</p>
+            <p><strong>Bước 3:</strong> Hệ thống sẽ tạo Command/JSON Output copy và dán vào cửa sổ Command Prompt - Enter và hiển thị kết quả dưới đây là thành công.</p>
             <pre class="json">{
 "status": "success",
 "message": "Successfully assigned accumulated Scavenged NIGHT from addr1q... to addr1q...",
 "solutions_consolidated": 2
 }</pre>
             <p>Ý nghĩa: toàn bộ NIGHT từ Donor address (quá khứ và tương lai) sẽ được chuyển sang Recipient address.</p>
-            <p>Nếu thấy lỗi, kiểm tra lại địa chỉ và chữ ký.</p>
+            <p>Nếu thấy lỗi, kiểm tra những thông báo lỗi phổ biến nhất và các lỗi có thể gây ra lỗi:
+
+409 Xung đột
+
+Ý nghĩa: Bạn đã quyên góp từ địa chỉ đó
+Cách khắc phục: Không còn gì để làm nữa; nó đã được hợp nhất
+400 Yêu cầu xấu
+
+Ý nghĩa: Chữ ký không hợp lệ
+Cách khắc phục: Đảm bảo tin nhắn đã ký khớp chính xác
+404 Không tìm thấy
+
+Ý nghĩa: Địa chỉ chưa đăng ký
+Cách khắc phục: Sử dụng địa chỉ từng là một phần của Scavenger.</p>
         </div>
 
         <div class="form-group">
@@ -256,7 +269,7 @@
             <div class="output-box">
                 <pre id="donateOutputWin"></pre>
             </div>
-            <button id="copyBtn" class="btn-copy">📋 Copy</button>
+            <button id="copyBtn" class="btn-copy">📋 Copy và dán vào cửa sổ Command Prompt</button>
         </div>
     </div>
 
