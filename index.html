@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scavenger NIGHT Transfer (Yoroi)</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 700px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  h2 {
+    color: #555;
+    font-size: 18px;
+    margin-top: 20px;
+  }
+  label {
+    display: block;
+    margin: 12px 0 6px;
+    font-weight: bold;
+  }
+  input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76,175,80,0.4);
+  }
+  button {
+    padding: 12px 25px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  .output {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 8px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+  }
+  .success {
+    color: green;
+    font-weight: bold;
+  }
+  .error {
+    color: red;
+    font-weight: bold;
+  }
+  .step {
+    background: #f7f7f7;
+    padding: 12px 15px;
+    border-left: 4px solid #4CAF50;
+    margin-bottom: 15px;
+    border-radius: 6px;
+  }
+  .tooltip {
+    font-size: 12px;
+    color: #777;
+    margin-top: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Scavenger NIGHT Transfer (Yoroi)</h1>
+
+  <div class="step">
+    <strong>Bước 1: Nhập địa chỉ</strong><br>
+    - Donor address: địa chỉ người bạn muốn chuyển NIGHT từ đó.<br>
+    - Recipient address: địa chỉ cuối cùng nhận toàn bộ NIGHT.
+  </div>
+
+  <label for="donor">Donor address (Người cho):</label>
+  <input id="donor" placeholder="Nhập địa chỉ người cho">
+  <div class="tooltip">Đây là địa chỉ đã tham gia Scavenger Mine và bạn muốn chuyển NIGHT từ đây.</div>
+
+  <label for="recipient">Recipient address (Người nhận):</label>
+  <input id="recipient" placeholder="Nhập địa chỉ người nhận">
+  <div class="tooltip">Toàn bộ NIGHT từ các Donor sẽ về địa chỉ này.</div>
+
+  <div class="step">
+    <strong>Bước 2:</strong> Ký message với Yoroi.<br>
+    Message chuẩn sẽ là: <em>Assign accumulated Scavenger rights to: &lt;RecipientAddress&gt;</em><br>
+    Nhấn nút dưới để Yoroi mở popup ký.
+  </div>
+
+  <button id="signAndSend">Sign & Transfer</button>
+
+  <div class="step">
+    <strong>Bước 3:</strong> Kết quả</strong><br>
+    Sau khi nhấn, kết quả chuyển NIGHT sẽ hiển thị ngay bên dưới.
+  </div>
+
+  <div id="output" class="output"></div>
+</div>
+
+<script>
+window.addEventListener('load', () => {
+  const output = document.getElementById('output');
+
+  async function signAndTransfer() {
+    const donor = document.getElementById('donor').value.trim();
+    const recipient = document.getElementById('recipient').value.trim();
+    output.innerHTML = "Đang xử lý...";
+
+    if (!donor || !recipient) {
+      output.innerHTML = '<span class="error">Vui lòng nhập cả Donor và Recipient address!</span>';
+      return;
+    }
+
+    const message = `Assign accumulated Scavenger rights to: ${recipient}`;
+
+    try {
+      const cardanoObj = window.cardano;
+      const yoroiApi = cardanoObj?.yoroi || cardanoObj?.experimental?.yoroi;
+
+      if (!yoroiApi) {
+        console.log('DEBUG window.cardano =', window.cardano);
+        output.innerHTML = '<span class="error">Vui lòng cài và kết nối ví Yoroi trên trình duyệt!</span>';
+        return;
+      }
+
+      const api = await yoroiApi.enable(); // mở ví
+      const signedData = await api.signData(donor, message);
+      const signature = signedData.signature;
+
+      const url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipient}/${donor}/${signature}`;
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+
+      const data = await resp.json();
+
+      if (data.status === 'success') {
+        output.innerHTML = `<span class="success">✅ Chuyển thành công!<br>
+          Message: ${data.message}<br>
+          Solutions consolidated: ${data.solutions_consolidated}</span>`;
+      } else {
+        output.innerHTML = `<span class="error">❌ Lỗi API: ${JSON.stringify(data)}</span>`;
+      }
+
+    } catch (e) {
+      console.error(e);
+      output.innerHTML = `<span class="error">❌ Có lỗi xảy ra: ${e.message}</span>`;
+    }
+  }
+
+  document.getElementById('signAndSend').onclick = signAndTransfer;
+});
+</script>
+</body>
+</html>
