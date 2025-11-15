@@ -227,7 +227,7 @@
         <div class="content">
             <p><strong>Bước 1:</strong> Nhập địa chỉ Donor (Người cho) và Recipient (Người nhận).</p>
             <p><strong>Bước 2:</strong> Nhấn <em>Ký và tạo Signature</em> để Yoroi mở ví và ký message.</p>
-            <p><strong>Bước 3:</strong> Ký xong, hệ thống sẽ tạo trực tiếp CURL command và JSON trả về như ví dụ dưới đây:</p>
+            <p><strong>Bước 3:</strong> Hệ thống sẽ tự động gửi request đến Scavenger và hiển thị kết quả dưới đây.</p>
             <pre class="json">{
 "status": "success",
 "message": "Successfully assigned accumulated Scavenged NIGHT from addr1q... to addr1q...",
@@ -247,12 +247,12 @@
             <input type="text" id="recipientAddress" placeholder="addr1..." />
         </div>
 
-        <button id="signBtn" class="btn-sign">Ký và tạo Signature</button>
+        <button id="signBtn" class="btn-sign">Ký và gửi Scavenger</button>
 
         <div id="status" class="status"></div>
 
         <div id="outputSection" class="output-section">
-            <h3 style="color: #333; margin-bottom: 10px;">📋 Command/JSON Output:</h3>
+            <h3 style="color: #333; margin-bottom: 10px;">📋 Kết quả trả về:</h3>
             <div class="output-box">
                 <pre id="donateOutputWin"></pre>
             </div>
@@ -266,11 +266,7 @@
         coll.addEventListener("click", function () {
             this.classList.toggle("active");
             const content = this.nextElementSibling;
-            if (content.style.display === "block") {
-                content.style.display = "none";
-            } else {
-                content.style.display = "block";
-            }
+            content.style.display = content.style.display === "block" ? "none" : "block";
         });
 
         const signBtn = document.getElementById('signBtn');
@@ -286,9 +282,7 @@
             statusDiv.className = `status ${type}`;
             statusDiv.style.display = 'block';
             if (type === 'success' || type === 'error') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
+                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
             }
         }
 
@@ -311,17 +305,26 @@
                 const walletAPI = await window.cardano.yoroi.enable();
                 const signature = await walletAPI.signData(donorAddr, hexMessage);
 
+                showStatus('🔄 Đang gửi request đến Scavenger...', 'info');
                 outputSection.style.display = 'block';
-                showStatus('✅ Tạo chữ ký thành công!', 'success');
 
                 const url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipientAddr}/${donorAddr}/${signature.signature}`;
-                donateOutputWin.textContent = `curl -L -X POST "${url}" -d "{}"`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const result = await response.json();
+                donateOutputWin.textContent = JSON.stringify(result, null, 2);
+                showStatus('✅ Chuyển quyền Scavenger thành công!', 'success');
 
                 outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             } catch (error) {
-                console.error('Signing error:', error);
-                showStatus(`❌ Lỗi khi ký: ${error.message}`, 'error');
+                console.error('Error:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
             }
         });
 
@@ -329,9 +332,7 @@
             navigator.clipboard.writeText(donateOutputWin.textContent).then(() => {
                 const originalText = copyBtn.textContent;
                 copyBtn.textContent = '✅ Đã copy!';
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                }, 2000);
+                setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
             }).catch(err => {
                 showStatus('❌ Không thể copy. Vui lòng copy thủ công.', 'error');
             });
