@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -245,7 +246,7 @@
             <p>Ý nghĩa: Địa chỉ chưa đăng ký</p>
             <p>Cách khắc phục: Sử dụng địa chỉ từng là một phần của Scavenger.</p>
         </div>
-		
+
         <div class="form-group">
             <label for="donorAddress">Địa chỉ Donor (Người cho) *</label>
             <input type="text" id="donorAddress" placeholder="addr1..." />
@@ -256,10 +257,12 @@
             <input type="text" id="recipientAddress" placeholder="addr1..." />
         </div>
 
-        <button id="signBtn" class="btn-sign">Ký và tạo Signature</button>
+        <button id="signBtn" class="btn-sign">Ký và gửi Night đi</button>
+
+        <div id="status" class="status"></div>
 
         <div id="outputSection" class="output-section">
-            <h3 style="color: #333; margin-bottom: 10px;">📋 Window:</h3>
+            <h3 style="color: #333; margin-bottom: 10px;">📋 Kết quả trả về:</h3>
             <div class="output-box">
                 <pre id="donateOutputWin"></pre>
             </div>
@@ -268,93 +271,79 @@
     </div>
 
     <script>
-        let walletAPI = null;
-        let connectedAddress = null;
+        // Collapsible
+        const coll = document.querySelector(".collapsible");
+        coll.addEventListener("click", function () {
+            this.classList.toggle("active");
+            const content = this.nextElementSibling;
+            content.style.display = content.style.display === "block" ? "none" : "block";
+        });
 
-        const connectBtn = document.getElementById('connectBtn');
         const signBtn = document.getElementById('signBtn');
         const copyBtn = document.getElementById('copyBtn');
         const statusDiv = document.getElementById('status');
-        const walletInfo = document.getElementById('walletInfo');
-        const connectedAddressEl = document.getElementById('connectedAddress');
         const outputSection = document.getElementById('outputSection');
         const donateOutputWin = document.getElementById('donateOutputWin');
         const donorInput = document.getElementById('donorAddress');
         const recipientInput = document.getElementById('recipientAddress');
 
-        function showStatus(message, type)
-        {
+        function showStatus(message, type) {
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
             statusDiv.style.display = 'block';
-
-            if (type === 'success' || type === 'error')
-            {
-                setTimeout(() =>
-                {
-                    statusDiv.style.display = 'none';
-                }, 5000);
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
             }
         }
 
-        signBtn.addEventListener('click', async () =>
-        {
+        signBtn.addEventListener('click', async () => {
             const donorAddr = donorInput.value.trim();
             const recipientAddr = recipientInput.value.trim();
 
-            if (!donorAddr || !recipientAddr)
-            {
+            if (!donorAddr || !recipientAddr) {
                 showStatus('❌ Vui lòng nhập đầy đủ địa chỉ Donor và Recipient.', 'error');
                 return;
             }
 
-            try
-            {
+            try {
                 showStatus('🔄 Đang tạo chữ ký...', 'info');
-
                 const message = "Assign accumulated Scavenger rights to: " + recipientAddr;
-
                 const hexMessage = Array.from(new TextEncoder().encode(message))
                     .map(b => b.toString(16).padStart(2, '0'))
                     .join('');
 
-                walletAPI = await window.cardano.yoroi.enable();
+                const walletAPI = await window.cardano.yoroi.enable();
                 const signature = await walletAPI.signData(donorAddr, hexMessage);
 
+                showStatus('🔄 Đang gửi request đến Scavenger...', 'info');
                 outputSection.style.display = 'block';
 
-                showStatus('✅ Tạo chữ ký thành công!', 'success');
+                const url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipientAddr}/${donorAddr}/${signature.signature}`;
 
-                // curl -L -X POST "https://scavenger.prod.gd.midnighttge.io/donate_to/<recipient_address>/<donor_address>/<signature>" -d "{}"
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
 
-                var url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipientAddr}/${donorAddr}/${signature.signature}`;
-                console.log("Request URL:", url);
-
-                donateOutputWin.textContent = `curl -L -X POST "${url}" -d "{}"`;
+                const result = await response.json();
+                donateOutputWin.textContent = JSON.stringify(result, null, 2);
+                showStatus('✅ Chuyển quyền Scavenger thành công!', 'success');
 
                 outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } catch (error)
-            {
-                console.error('Signing error:', error);
-                showStatus(`❌ Lỗi khi ký: ${error.message}`, 'error');
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
             }
         });
 
-
-
-        copyBtn.addEventListener('click', () =>
-        {
-            const text = donateOutput.textContent;
-            navigator.clipboard.writeText(text).then(() =>
-            {
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(donateOutputWin.textContent).then(() => {
                 const originalText = copyBtn.textContent;
                 copyBtn.textContent = '✅ Đã copy!';
-                setTimeout(() =>
-                {
-                    copyBtn.textContent = originalText;
-                }, 2000);
-            }).catch(err =>
-            {
+                setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+            }).catch(err => {
                 showStatus('❌ Không thể copy. Vui lòng copy thủ công.', 'error');
             });
         });
