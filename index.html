@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scavenger-NIGHT-Transfer-Yoroi</title>
+    <title>Yoroi Signature Tool - Scavenger Transfer</title>
     <style>
         * {
             margin: 0;
@@ -220,7 +220,7 @@
 
 <body>
     <div class="container">
-        <h1>💵Scavenger-NIGHT-Transfer-Yoroi</h1>
+        <h1>🔐 Scavenger-NIGHT-Transfer-Yoroi</h1>
         <p class="subtitle">Hợp nhất token Night cho Scavenger Mine</p>
 
         <button type="button" class="collapsible">📖 Hướng dẫn chi tiết</button>
@@ -233,18 +233,25 @@
 "message": "Successfully assigned accumulated Scavenged NIGHT from addr1q... to addr1q...",
 "solutions_consolidated": 2
 }</pre>
-            <p><strong>Ý nghĩa: toàn bộ NIGHT từ Donor address (quá khứ và tương lai) sẽ được chuyển sang Recipient address.</strong></p>
-            <p>Nếu thấy lỗi, kiểm tra những thông báo lỗi phổ biến nhất và các lỗi có thể gây ra lỗi:</p>
-            <p><strong>409 Xung đột</strong></p>
-            <p>Ý nghĩa: Bạn đã gửi Night đi từ địa chỉ đó rồi</p>
-            <p>Cách khắc phục: Không còn gì để làm nữa; nó đã được hợp nhất</p>
-            <p><strong>400 Yêu cầu xấu</strong></p>
-            <p>Ý nghĩa: Chữ ký không hợp lệ</p>
-            <p>Cách khắc phục: Đảm bảo tin nhắn đã ký khớp chính xác</p>
-            <p><strong>404 Không tìm thấy</strong></p>
-            <p>Ý nghĩa: Địa chỉ chưa đăng ký</p>
-            <p>Cách khắc phục: Sử dụng địa chỉ từng là một phần của Scavenger.</p>
-        </div>
+            <p>Ý nghĩa: toàn bộ NIGHT từ Donor address (quá khứ và tương lai) sẽ được chuyển sang Recipient address.</p>
+            <p>Nếu thấy lỗi, kiểm tra những thông báo lỗi phổ biến nhất và các lỗi có thể gây ra lỗi:
+
+409 Xung đột
+
+Ý nghĩa: Bạn đã quyên góp từ địa chỉ đó
+Cách khắc phục: Không còn gì để làm nữa; nó đã được hợp nhất
+400 Yêu cầu xấu
+
+Ý nghĩa: Chữ ký không hợp lệ
+Cách khắc phục: Đảm bảo tin nhắn đã ký khớp chính xác
+404 Không tìm thấy
+
+Ý nghĩa: Địa chỉ chưa đăng ký
+Cách khắc phục: Sử dụng địa chỉ từng là một phần của Scavenger.</p>
+ 
+
+
+        <div id="status" class="status"></div>
 
         <div class="form-group">
             <label for="donorAddress">Địa chỉ Donor (Người cho) *</label>
@@ -256,12 +263,10 @@
             <input type="text" id="recipientAddress" placeholder="addr1..." />
         </div>
 
-        <button id="signBtn" class="btn-sign">Ký và gửi Night đi</button>
-
-        <div id="status" class="status"></div>
+        <button id="signBtn" class="btn-sign">Ký và tạo Signature</button>
 
         <div id="outputSection" class="output-section">
-            <h3 style="color: #333; margin-bottom: 10px;">📋 Kết quả trả về:</h3>
+            <h3 style="color: #333; margin-bottom: 10px;">📋 Window:</h3>
             <div class="output-box">
                 <pre id="donateOutputWin"></pre>
             </div>
@@ -270,79 +275,93 @@
     </div>
 
     <script>
-        // Collapsible
-        const coll = document.querySelector(".collapsible");
-        coll.addEventListener("click", function () {
-            this.classList.toggle("active");
-            const content = this.nextElementSibling;
-            content.style.display = content.style.display === "block" ? "none" : "block";
-        });
+        let walletAPI = null;
+        let connectedAddress = null;
 
+        const connectBtn = document.getElementById('connectBtn');
         const signBtn = document.getElementById('signBtn');
         const copyBtn = document.getElementById('copyBtn');
         const statusDiv = document.getElementById('status');
+        const walletInfo = document.getElementById('walletInfo');
+        const connectedAddressEl = document.getElementById('connectedAddress');
         const outputSection = document.getElementById('outputSection');
         const donateOutputWin = document.getElementById('donateOutputWin');
         const donorInput = document.getElementById('donorAddress');
         const recipientInput = document.getElementById('recipientAddress');
 
-        function showStatus(message, type) {
+        function showStatus(message, type)
+        {
             statusDiv.textContent = message;
             statusDiv.className = `status ${type}`;
             statusDiv.style.display = 'block';
-            if (type === 'success' || type === 'error') {
-                setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+
+            if (type === 'success' || type === 'error')
+            {
+                setTimeout(() =>
+                {
+                    statusDiv.style.display = 'none';
+                }, 5000);
             }
         }
 
-        signBtn.addEventListener('click', async () => {
+        signBtn.addEventListener('click', async () =>
+        {
             const donorAddr = donorInput.value.trim();
             const recipientAddr = recipientInput.value.trim();
 
-            if (!donorAddr || !recipientAddr) {
+            if (!donorAddr || !recipientAddr)
+            {
                 showStatus('❌ Vui lòng nhập đầy đủ địa chỉ Donor và Recipient.', 'error');
                 return;
             }
 
-            try {
+            try
+            {
                 showStatus('🔄 Đang tạo chữ ký...', 'info');
+
                 const message = "Assign accumulated Scavenger rights to: " + recipientAddr;
+
                 const hexMessage = Array.from(new TextEncoder().encode(message))
                     .map(b => b.toString(16).padStart(2, '0'))
                     .join('');
 
-                const walletAPI = await window.cardano.yoroi.enable();
+                walletAPI = await window.cardano.yoroi.enable();
                 const signature = await walletAPI.signData(donorAddr, hexMessage);
 
-                showStatus('🔄 Đang gửi request đến Scavenger...', 'info');
                 outputSection.style.display = 'block';
 
-                const url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipientAddr}/${donorAddr}/${signature.signature}`;
+                showStatus('✅ Tạo chữ ký thành công!', 'success');
 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
+                // curl -L -X POST "https://scavenger.prod.gd.midnighttge.io/donate_to/<recipient_address>/<donor_address>/<signature>" -d "{}"
 
-                const result = await response.json();
-                donateOutputWin.textContent = JSON.stringify(result, null, 2);
-                showStatus('✅ Chuyển quyền Scavenger thành công!', 'success');
+                var url = `https://scavenger.prod.gd.midnighttge.io/donate_to/${recipientAddr}/${donorAddr}/${signature.signature}`;
+                console.log("Request URL:", url);
+
+                donateOutputWin.textContent = `curl -L -X POST "${url}" -d "{}"`;
 
                 outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+            } catch (error)
+            {
+                console.error('Signing error:', error);
+                showStatus(`❌ Lỗi khi ký: ${error.message}`, 'error');
             }
         });
 
-        copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(donateOutputWin.textContent).then(() => {
+
+
+        copyBtn.addEventListener('click', () =>
+        {
+            const text = donateOutput.textContent;
+            navigator.clipboard.writeText(text).then(() =>
+            {
                 const originalText = copyBtn.textContent;
                 copyBtn.textContent = '✅ Đã copy!';
-                setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
-            }).catch(err => {
+                setTimeout(() =>
+                {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            }).catch(err =>
+            {
                 showStatus('❌ Không thể copy. Vui lòng copy thủ công.', 'error');
             });
         });
@@ -350,5 +369,3 @@
 </body>
 
 </html>
-
-
