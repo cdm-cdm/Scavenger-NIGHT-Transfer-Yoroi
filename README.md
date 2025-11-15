@@ -1,6 +1,9 @@
-Truy cập https://cdm-cdm.github.io/Scavenger-NIGHT-Transfer-Yoroi-/
+Truy cập https://cdm-cdm.github.io/Scavenger-NIGHT-Transfer-Yoroi/
+
 Bước 1: Nhập địa chỉ Donor và Recipient.
+
 Bước 2: Nhấn nút “Ký và tạo chữ ký số Signature” để Yoroi mở ví và ký message.
+
 Bước 3: Hệ thống tạo lệnh curl (hoặc JSON output), copy vào CMD và chạy, sẽ hiện kết quả dạng:
 
 {
